@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sagip-Ani Mobile Simulator</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #0f172a;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Device Mockup Frame */
+    .phone-frame {
+      width: 380px;
+      height: 740px;
+      background: #000;
+      border-radius: 46px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 10px #1e293b, 0 0 0 12px #334155;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Notch / Dynamic Island */
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 24px;
+      background: #000000;
+      border-radius: 20px;
+      z-index: 100;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 38px;
+      padding: 10px 24px 0 24px;
+      color: #0f172a;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      background: #f8fafc;
+      z-index: 90;
+    }
+
+    /* Screen Views Area */
+    .screen-container {
+      flex: 1;
+      background: #f8fafc;
+      overflow-y: auto;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view {
+      display: none;
+      flex-direction: column;
+      padding: 16px;
+      gap: 12px;
+      height: 100%;
+    }
+
+    .view.active {
+      display: flex;
+    }
+
+    /* Card Component */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    /* Header Bar */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 6px;
+    }
+
+    .app-logo {
+      font-size: 16px;
+      font-weight: 800;
+      color: #15803d;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-tag {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* System Status Chip */
+    .status-chip {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #166534;
+    }
+
+    /* Telemetry Grid */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .metric-box {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 4px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 8px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 16px;
+      font-weight: 800;
+      margin: 4px 0 2px 0;
+      color: var(--text);
+    }
+
+    .metric-badge {
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .badge-dry { background: #fee2e2; color: var(--danger); }
+    .badge-opt { background: #dcfce7; color: var(--success); }
+    .badge-gray { background: #f1f5f9; color: #475569; }
+
+    /* Weather & Controller Banner */
+    .banner-blue {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+    }
+
+    .banner-amber {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+
+    .btn-override {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 700;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+    }
+
+    .btn-override.manual-active {
+      background: var(--danger);
+    }
+
+    /* Screen 2: Camera Viewport */
+    .camera-frame {
+      flex: 1;
+      border: 2px dashed #94a3b8;
+      border-radius: 14px;
+      background: #020617;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .reticle-box {
+      width: 200px;
+      height: 200px;
+      border: 2px solid #38bdf8;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #f8fafc;
+      font-size: 11px;
+      text-align: center;
+      padding: 10px;
+      position: relative;
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .scanner-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: scanSweep 2s infinite ease-in-out;
+    }
+
+    @keyframes scanSweep {
+      0% { top: 10%; }
+      50% { top: 90%; }
+      100% { top: 10%; }
+    }
+
+    .btn-capture {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    /* Screen 3: Diagnostic Results */
+    .card-danger {
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .card-success {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .tts-select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 6px;
+      outline: none;
+    }
+
+    .btn-tts {
+      background: var(--success);
+      color: #ffffff;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    /* Navigation Bar */
+    .nav-bar {
+      height: 64px;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 6px 12px;
+      gap: 6px;
+      z-index: 100;
+    }
+
+    .nav-item {
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 9.5px;
+      font-weight: 600;
+      gap: 3px;
+      transition: all 0.15s ease;
+    }
+
+    .nav-item span {
+      font-size: 15px;
+    }
+
+    .nav-item.active {
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Physical Smartphone Frame -->
+  <div class="phone-frame">
+    <div class="phone-notch"></div>
+    
+    <!-- Top System Status Bar -->
+    <div class="status-bar">
+      <span>09:41</span>
+      <span>4G LTE 98% 🔋</span>
+    </div>
+
+    <div class="screen-container">
+
+      <!-- ============================================== -->
+      <!-- SCREEN 1: TELEMETRY DASHBOARD                  -->
+      <!-- ============================================== -->
+      <section id="view-dashboard" class="view active">
+        <div class="app-header">
+          <div class="app-logo">🌾 Sagip-Ani</div>
+          <div class="field-tag">Field 1: Rice (0.8 ha)</div>
+        </div>
+
+        <div class="status-chip">
+          <span>● ACTIVE FIELD NODE (Solar)</span>
+          <span style="color:#64748b; font-weight: normal;">Sync: Just now</span>
+        </div>
+
+        <!-- Telemetry Gauges -->
+        <div class="telemetry-grid">
+          <div class="metric-box">
+            <div class="metric-label">Soil Moisture</div>
+            <div class="metric-value" id="val-moisture">38%</div>
+            <span class="metric-badge badge-dry" id="badge-moisture">DRY</span>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Soil Temp</div>
+            <div class="metric-value">27.5°C</div>
+            <span class="metric-badge badge-opt">OPTIMAL</span>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Ambient</div>
+            <div class="metric-value">31°C</div>
+            <span class="metric-badge badge-gray">78% RH</span>
+          </div>
+        </div>
+
+        <!-- Weather Lookahead Banner -->
+        <div class="card banner-blue">
+          <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">🌧 WEATHER FORECAST (OpenWeatherMap)</div>
+          <div style="font-size: 12px; font-weight: 600;">Rain probability 75% in 4 hours</div>
+          <div style="font-size: 9.5px; opacity: 0.85; margin-top: 2px;">Precipitation expected: ~12mm</div>
+        </div>
+
+        <!-- Irrigation Controller Status -->
+        <div class="card banner-amber" id="irrigation-box">
+          <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">⚙ IRRIGATION AUTOMATION LOGIC</div>
+          <div id="pump-status-text" style="font-size: 12px; font-weight: 800; color: #b45309;">STATUS: PUMP SUSPENDED</div>
+          <div id="pump-sub-text" style="font-size: 9.5px; margin-top: 2px;">Capacitive threshold triggered, but rain forecast is TRUE. Conserving water.</div>
+        </div>
+
+        <!-- Interactive Manual Pump Override -->
+        <button class="btn-override" id="btn-toggle-pump" onclick="togglePumpOverride()">
+          <span>⚡</span> <span id="override-text">MANUAL PUMP OVERRIDE: [ OFF ]</span>
+        </button>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN 2: MOBILE LEAF SCAN                     -->
+      <!-- ============================================== -->
+      <section id="view-scan" class="view">
+        <div class="app-header">
+          <span style="font-size: 11px; font-weight: 700; color: var(--primary); cursor: pointer;" onclick="switchTab('dashboard')">&lt; Dashboard</span>
+          <span class="field-tag">Camera Stream (Active)</span>
+        </div>
+
+        <div class="camera-frame">
+          <div class="reticle-box">
+            <div class="scanner-line"></div>
+            <span style="font-size: 26px; margin-bottom: 4px;">🌿</span>
+            <strong>Align foliar lesion</strong>
+            <span>within bounding box</span>
+            <span style="font-size: 9px; color: #94a3b8; margin-top: 6px;">CNN Inference Target Reticle</span>
+          </div>
+        </div>
+
+        <button class="btn-capture" onclick="simulateLeafScan()">
+          <span>📸</span> Capture &amp; Run Classification
+        </button>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN 3: DIAGNOSTIC & ADVISORY                -->
+      <!-- ============================================== -->
+      <section id="view-advisory" class="view">
+        <div class="app-header">
+          <div class="app-logo">🩺 Foliar Advisory</div>
+          <span class="field-tag">MobileNetV3 Edge</span>
+        </div>
+
+        <!-- Diagnostic Card -->
+        <div class="card card-danger">
+          <div style="font-size: 10px; font-weight: bold; color: #991b1b;">CNN CLASSIFICATION RESULT</div>
+          <div style="font-size: 14px; font-weight: 800; color: #7f1d1d; margin-top: 2px;">Rice Blast Disease</div>
+          <div style="font-size: 10.5px; font-style: italic; color: #991b1b;">Magnaporthe oryzae</div>
+          <div style="font-size: 10px; font-weight: 700; color: var(--danger); margin-top: 6px;">Confidence Score: 94.2%</div>
+        </div>
+
+        <!-- Recommended Treatment -->
+        <div class="card">
+          <div style="font-size: 10px; font-weight: bold; color: var(--text-muted);">RECOMMENDED TREATMENT INTERVENTION</div>
+          <div style="font-size: 12px; margin-top: 4px;">Apply targeted systemic fungicide <strong>Tricyclazole (75% WP)</strong>.</div>
+          <div style="font-size: 10.5px; color: var(--danger); font-weight: 700; margin-top: 4px;">Action Window: Within 48 hours</div>
+        </div>
+
+        <!-- TTS Voice Engine Card -->
+        <div class="card card-success">
+          <div style="font-size: 10px; font-weight: bold; color: #166534;">MULTILINGUAL AUDIO ADVISORY (TTS)</div>
+          
+          <select id="tts-language" class="tts-select">
+            <option value="tagalog">Language: Filipino / Tagalog</option>
+            <option value="ilocano">Language: Ilocano</option>
+            <option value="english">Language: English</option>
+          </select>
+
+          <button class="btn-tts" onclick="playVoiceAdvisory()">
+            <span>🔊</span> Play Spoken Summary
+          </button>
+          
+          <div id="tts-preview-box" style="font-size: 9.5px; font-style: italic; color: #14532d; margin-top: 8px;">
+            "Babala: Natuklasan ang Rice Blast sa iyong pananim. Mag-wisik ng fungicide sa loob ng 48 oras."
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 3-Button Bottom Navigation Bar -->
+    <nav class="nav-bar">
+      <button class="nav-item active" id="tab-dashboard" onclick="switchTab('dashboard')">
+        <span>📊</span> Dashboard
+      </button>
+      <button class="nav-item" id="tab-scan" onclick="switchTab('scan')">
+        <span>📷</span> Scan
+      </button>
+      <button class="nav-item" id="tab-advisory" onclick="switchTab('advisory')">
+        <span>🔊</span> Advisory
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    let isPumpManualActive = false;
+
+    // View Routing
+    function switchTab(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+
+      document.getElementById('view-' + viewId).classList.add('active');
+      document.getElementById('tab-' + viewId).classList.add('active');
+    }
+
+    // Toggle Manual Pump Relay
+    function togglePumpOverride() {
+      const btn = document.getElementById('btn-toggle-pump');
+      const text = document.getElementById('override-text');
+      const statusText = document.getElementById('pump-status-text');
+      const subText = document.getElementById('pump-sub-text');
+      const moistureVal = document.getElementById('val-moisture');
+      const moistureBadge = document.getElementById('badge-moisture');
+
+      isPumpManualActive = !isPumpManualActive;
+
+      if (isPumpManualActive) {
+        btn.classList.add('manual-active');
+        text.innerText = "MANUAL PUMP OVERRIDE: [ ON ]";
+        statusText.innerText = "STATUS: PUMP ACTUATING (Manual)";
+        statusText.style.color = "#dc2626";
+        subText.innerText = "Relay closed. 12V submersible pump is dispensing water.";
+        moistureVal.innerText = "52%";
+        moistureBadge.className = "metric-badge badge-opt";
+        moistureBadge.innerText = "OPTIMAL";
+      } else {
+        btn.classList.remove('manual-active');
+        text.innerText = "MANUAL PUMP OVERRIDE: [ OFF ]";
+        statusText.innerText = "STATUS: PUMP SUSPENDED";
+        statusText.style.color = "#b45309";
+        subText.innerText = "Capacitive threshold triggered, but rain forecast is TRUE. Conserving water.";
+        moistureVal.innerText = "38%";
+        moistureBadge.className = "metric-badge badge-dry";
+        moistureBadge.innerText = "DRY";
+      }
+    }
+
+    // Simulated Leaf Scanning Action
+    function simulateLeafScan() {
+      const btn = document.querySelector('.btn-capture');
+      btn.innerHTML = "<span>⏳</span> Analyzing leaf foliar pattern...";
+      btn.style.opacity = "0.7";
+
+      setTimeout(() => {
+        btn.innerHTML = "<span>📸</span> Capture &amp; Run Classification";
+        btn.style.opacity = "1";
+        switchTab('advisory');
+      }, 1000);
+    }
+
+    // Speech Audio Playback using Web Speech API
+    function playVoiceAdvisory() {
+      const langChoice = document.getElementById('tts-language').value;
+      const previewBox = document.getElementById('tts-preview-box');
+
+      let speechText = "";
+      let langCode = "fil-PH";
+
+      if (langChoice === 'tagalog') {
+        speechText = "Babala: Natuklasan ang Rice Blast sa iyong pananim. Mag-wisik ng inirekomendang fungicide sa loob ng apatnapu't walong oras.";
+        langCode = "fil-PH";
+        previewBox.innerText = `"${speechText}"`;
+      } else if (langChoice === 'ilocano') {
+        speechText = "Pakaammo: Adda nasarakan a Rice Blast iti mulam. Agisprey iti fungicide iti uneg ti uppat a pulo ket walo nga oras.";
+        langCode = "fil-PH";
+        previewBox.innerText = `"${speechText}"`;
+      } else {
+        speechText = "Warning: Rice Blast disease detected. Apply recommended fungicide within 48 hours.";
+        langCode = "en-US";
+        previewBox.innerText = `"${speechText}"`;
+      }
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(speechText);
+        utterance.lang = langCode;
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert("Text-to-speech audio: " + speechText);
+      }
+    }
+  </script>
+</body>
+</html>
