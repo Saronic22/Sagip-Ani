@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sagip-Ani Mobile Simulator</title>
+  <title>Sagip-Ani Mobile Simulator with Interactive Weather</title>
+  <!-- Leaflet CSS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     :root {
       --primary: #2563eb;
@@ -188,6 +190,13 @@
       background: #eff6ff;
       border: 1px solid #bfdbfe;
       color: #1e40af;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .banner-blue:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
     }
 
     .banner-amber {
@@ -219,9 +228,10 @@
     /* Screen 2: Camera Viewport */
     .camera-frame {
       flex: 1;
-      border: 2px dashed #94a3b8;
+      border: 2px dashed #38bdf8;
       border-radius: 14px;
-      background: #020617;
+      
+      background: url("https://eu-images.contentstack.com/v3/assets/bltdd43779342bd9107/bltbbd5c7efa3cb7183/6675875175b6dfd221a0955c/UofA-RiceBlast-c183d5_o.jpg?width=1280&auto=webp&quality=80&disable=upscale") center/cover no-repeat;
       position: relative;
       overflow: hidden;
       display: flex;
@@ -318,15 +328,138 @@
       margin-top: 8px;
     }
 
-    /* Navigation Bar */
+    .btn-ask-ai {
+      background: #1e293b;
+      color: #ffffff;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+      width: 100%;
+      transition: background 0.15s ease;
+    }
+
+    .btn-ask-ai:hover {
+      background: #0f172a;
+    }
+
+    /* Screen 4: Dynamic AI Chat UI */
+    .chat-view-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 8px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .chat-bubble {
+      max-width: 82%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .chat-bubble.bot {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      color: var(--text);
+      align-self: flex-start;
+      border-bottom-left-radius: 2px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .chat-bubble.user {
+      background: var(--primary);
+      color: #ffffff;
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+
+    .quick-prompts-container {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .quick-prompts-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .prompt-chip {
+      white-space: nowrap;
+      background: #e2e8f0;
+      color: #334155;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: none;
+    }
+
+    .prompt-chip:hover {
+      background: #cbd5e1;
+    }
+
+    .chat-input-bar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      background: #ffffff;
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .chat-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 12px;
+      padding: 6px 8px;
+      background: transparent;
+    }
+
+    .btn-send {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* 4-Button Bottom Navigation Bar */
     .nav-bar {
       height: 64px;
       background: #ffffff;
       border-top: 1px solid var(--border);
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      padding: 6px 12px;
-      gap: 6px;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 6px 6px;
+      gap: 4px;
       z-index: 100;
     }
 
@@ -340,20 +473,272 @@
       border-radius: 8px;
       cursor: pointer;
       color: var(--text-muted);
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 600;
-      gap: 3px;
+      gap: 2px;
       transition: all 0.15s ease;
     }
 
     .nav-item span {
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .nav-item.active {
       background: var(--primary);
       color: #ffffff;
       font-weight: 700;
+    }
+
+    /* ============================================== */
+    /* OPENWEATHER ONE CALL 3.0 MODAL OVERLAY STYLES  */
+    /* ============================================== */
+    .weather-modal-overlay {
+      position: absolute;
+      top: 38px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #18191c;
+      color: #e2e8f0;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+
+    .weather-modal-overlay.active {
+      display: flex;
+    }
+
+    .weather-modal-header {
+      background: #212328;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #2d3139;
+    }
+
+    .wm-title-sub {
+      font-size: 9px;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .wm-title-main {
+      font-size: 11px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .wm-coords {
+      font-size: 9.5px;
+      color: #94a3b8;
+    }
+
+    .wm-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .weather-modal-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Current Temp Block */
+    .wm-current-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .wm-temp-large {
+      font-size: 38px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .wm-condition-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .wm-condition-sub {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* Current Stats Grid */
+    .wm-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .wm-stat-card {
+      background: #212328;
+      border: 1px solid #2d3139;
+      border-radius: 8px;
+      padding: 8px 6px;
+    }
+
+    .wm-stat-label {
+      font-size: 8px;
+      color: #94a3b8;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .wm-stat-value {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-top: 3px;
+    }
+
+    /* Daily Forecast Cards */
+    .wm-section-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .wm-daily-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .wm-daily-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .wm-daily-card {
+      min-width: 62px;
+      background: #212328;
+      border: 1px solid #2d3139;
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .wm-daily-day {
+      font-size: 9px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .wm-daily-icon {
+      font-size: 16px;
+      margin: 4px 0;
+    }
+
+    .wm-daily-temps {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .wm-daily-pop {
+      font-size: 8.5px;
+      color: #38bdf8;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* Hourly Forecast Table */
+    .wm-hourly-container {
+      background: #212328;
+      border: 1px solid #2d3139;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .wm-hourly-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+      white-space: nowrap;
+    }
+
+    .wm-hourly-table th, .wm-hourly-table td {
+      padding: 6px 8px;
+      text-align: center;
+      border-bottom: 1px solid #2d3139;
+    }
+
+    .wm-hourly-table th {
+      color: #94a3b8;
+      font-weight: 700;
+      background: #1a1c20;
+    }
+
+    .wm-hourly-table td {
+      color: #e2e8f0;
+    }
+
+    /* Map Switcher & Map Container */
+    .wm-map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .wm-layer-btn {
+      background: #2d3139;
+      border: 1px solid #3f4450;
+      color: #94a3b8;
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 4px 7px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .wm-layer-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #3b82f6;
+    }
+
+    #weather-map {
+      width: 100%;
+      height: 180px;
+      border-radius: 10px;
+      border: 1px solid #2d3139;
+      background: #0f172a;
+      z-index: 10;
+    }
+
+    .wm-about-card {
+      background: #212328;
+      border: 1px solid #2d3139;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 9.5px;
+      color: #94a3b8;
     }
   </style>
 </head>
@@ -369,6 +754,7 @@
       <span>4G LTE 98% 🔋</span>
     </div>
 
+    <!-- Container Area -->
     <div class="screen-container">
 
       <!-- ============================================== -->
@@ -405,10 +791,13 @@
         </div>
 
         <!-- Weather Lookahead Banner -->
-        <div class="card banner-blue">
+        <div class="card banner-blue" onclick="openWeatherModal()">
           <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">🌧 WEATHER FORECAST (OpenWeatherMap)</div>
           <div style="font-size: 12px; font-weight: 600;">Rain probability 75% in 4 hours</div>
-          <div style="font-size: 9.5px; opacity: 0.85; margin-top: 2px;">Precipitation expected: ~12mm</div>
+          <div style="font-size: 9.5px; opacity: 0.85; margin-top: 2px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Precipitation expected: ~12mm</span>
+            <span style="font-weight: 800; text-decoration: underline;">Tap for Radar ➔</span>
+          </div>
         </div>
 
         <!-- Irrigation Controller Status -->
@@ -449,7 +838,7 @@
       </section>
 
       <!-- ============================================== -->
-      <!-- SCREEN 3: DIAGNOSTIC & ADVISORY                -->
+      <!-- SCREEN 3: DIAGNOSTIC & ADVISORY (PLANTIX-STYLE)-->
       <!-- ============================================== -->
       <section id="view-advisory" class="view">
         <div class="app-header">
@@ -457,20 +846,82 @@
           <span class="field-tag">MobileNetV3 Edge</span>
         </div>
 
-        <!-- Diagnostic Card -->
+        <!-- Diagnostic Overview Card -->
         <div class="card card-danger">
-          <div style="font-size: 10px; font-weight: bold; color: #991b1b;">CNN CLASSIFICATION RESULT</div>
-          <div style="font-size: 14px; font-weight: 800; color: #7f1d1d; margin-top: 2px;">Rice Blast Disease</div>
-          <div style="font-size: 10.5px; font-style: italic; color: #991b1b;">Magnaporthe oryzae</div>
-          <div style="font-size: 10px; font-weight: 700; color: var(--danger); margin-top: 6px;">Confidence Score: 94.2%</div>
+          <div style="font-size: 9.5px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.5px;">CNN Classification Result</div>
+          <div style="font-size: 16px; font-weight: 800; color: #7f1d1d; margin-top: 2px;">Rice Blast Disease</div>
+          <div style="font-size: 11px; font-style: italic; color: #991b1b;">Magnaporthe oryzae (syn. Magnaporthe grisea)</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+            <span style="font-size: 10px; font-weight: 800; color: #dc2626; background: #fee2e2; padding: 3px 8px; border-radius: 6px;">Confidence Score: 94.2%</span>
+            <span style="font-size: 9.5px; font-weight: 700; color: #991b1b;">Action: Immediate</span>
+          </div>
         </div>
 
-        <!-- Recommended Treatment -->
+        <!-- Symptoms Section -->
         <div class="card">
-          <div style="font-size: 10px; font-weight: bold; color: var(--text-muted);">RECOMMENDED TREATMENT INTERVENTION</div>
-          <div style="font-size: 12px; margin-top: 4px;">Apply targeted systemic fungicide <strong>Tricyclazole (75% WP)</strong>.</div>
-          <div style="font-size: 10.5px; color: var(--danger); font-weight: 700; margin-top: 4px;">Action Window: Within 48 hours</div>
+          <div style="font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 6px;">Symptoms</div>
+          <p style="font-size: 10.5px; line-height: 1.5; color: #334155;">
+            Rice blast affects all the above-ground parts of the plant: leaf, collar, node, neck, parts of panicle, and sometimes leaf sheath. Leaves exhibit yellow to light green chlorotic, eye-shaped lesions with pointed ends. The borders of these lesions are necrotic and the center is grey to white. The size of the lesions depends on the age of the plant, the variety and the time of infection. As the lesions grow, the leaves dry out gradually. If the junctions of leaves and sheaths are infected, collar rot can appear, and the leaves above the junctions die. Nodes can also be affected. This leads to brown nodes and the breaking of stems, occasionally causing the complete death of seedling or young plants. At later growth stages, a severe leaf blast infection reduces leaf area and consequently for grain fill and yield.
+          </p>
         </div>
+
+        <!-- Recommendations Card (Light Blue Container) -->
+        <div class="card" style="background: #eff6ff; border-color: #bfdbfe;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #1e40af; margin-bottom: 8px;">Recommendations</div>
+
+          <!-- Organic Control -->
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; display: flex; align-items: center; gap: 4px;">
+              <span>🌱</span> Organic Control
+            </div>
+            <p style="font-size: 10px; line-height: 1.45; color: #1e40af; margin-top: 3px;">
+              To this day, no effective biological control of the disease is commercially available. Experiments are ongoing to test the viability of products based on <em>Streptomyces</em> or <em>Pseudomonas</em> bacteria on the fungus and the incidence/spread of the disease.
+            </p>
+          </div>
+
+          <!-- Chemical Control -->
+          <div>
+            <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; display: flex; align-items: center; gap: 4px;">
+              <span>🧪</span> Chemical Control
+            </div>
+            <p style="font-size: 10px; line-height: 1.45; color: #1e40af; margin-top: 3px;">
+              Always consider an integrated approach with preventive measures together with biological treatments if available. Seed treatment with thiram is effective against the disease. Fungicides containing azoxystrobin, or active ingredients of the family of triazoles or strobilurins can also be sprayed at nursery, tillering and panicle emergence stages to control rice blast. One or two fungicide applications at heading can be effective in controlling the disease.
+            </p>
+          </div>
+        </div>
+
+        <!-- What caused it? -->
+        <div class="card">
+          <div style="font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 6px;">What caused it?</div>
+          <p style="font-size: 10.5px; line-height: 1.5; color: #334155;">
+            Symptoms of rice blast are caused by the fungus <em>Magnaporthe grisea</em> (syn. <em>Magnaporthe oryzae</em>), which is one of the most destructive diseases of rice. It can also infect other agriculturally important cereals such as wheat, rye, barley, and pearl millet. The fungus can survive on the straw after harvest and thus be carried over to the next season. Plants usually become less susceptible to the pathogen as they mature. The disease is favored by cool temperatures, frequent rainfalls, and low soil moisture. A prolonged period of leaf moisture is also required for infection. In upland rice, sites prone to dew formation (large day to night temperature differences) are at risk. Finally, plants sown in soils with high nitrogen or low silicon levels are more likely to develop the disease.
+          </p>
+        </div>
+
+        <!-- Preventive Measures -->
+        <div class="card">
+          <div style="font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 6px;">Preventive Measures</div>
+          <ul style="font-size: 10px; line-height: 1.5; color: #334155; padding-left: 14px;">
+            <li style="margin-bottom: 3px;">Use healthy or certified seed material.</li>
+            <li style="margin-bottom: 3px;">Plant resistant varieties available in the area.</li>
+            <li style="margin-bottom: 3px;">Sow seeds early in the season, after the onset of the rainy season.</li>
+            <li style="margin-bottom: 3px;">Avoid excessive nitrogen fertilisation and split the applications into two or more treatments.</li>
+            <li style="margin-bottom: 3px;">Avoid drought stress to the plants with regular irrigation.</li>
+            <li style="margin-bottom: 3px;">Keep a proper flood level for the rice to grow properly.</li>
+            <li style="margin-bottom: 3px;">Maintain continuous flooding and avoid drainage of the rice field.</li>
+            <li style="margin-bottom: 3px;">Maintain control of weeds and alternative hosts.</li>
+            <li style="margin-bottom: 3px;">Apply silicon fertilisers if the soil is known to be silicon deficient.</li>
+            <li style="margin-bottom: 3px;">Cheap sources of silicon include straws of rice varieties with high silicon content.</li>
+            <li style="margin-bottom: 3px;">Monitor your field regularly for symptoms.</li>
+            <li style="margin-bottom: 3px;">Destroy all infected plant residues to prevent the carry-over of the fungus in the field.</li>
+            <li style="margin-bottom: 3px;">Plan a crop rotation as a simple and effective way to reduce populations.</li>
+          </ul>
+        </div>
+
+        <!-- Interactive AI Chat Action Button -->
+        <button class="btn-ask-ai" onclick="openChatWithScanContext()">
+          <span>💬</span> Ask AI Assistant About This Result
+        </button>
 
         <!-- TTS Voice Engine Card -->
         <div class="card card-success">
@@ -492,32 +943,402 @@
         </div>
       </section>
 
+      <!-- ============================================== -->
+      <!-- SCREEN 4: AI AGRI CHAT ASSISTANT              -->
+      <!-- ============================================== -->
+      <section id="view-chat" class="view">
+        <div class="app-header">
+          <div class="app-logo">🤖 AI Agronomist</div>
+          <span class="field-tag">Sagip-Ani Assistant</span>
+        </div>
+
+        <div class="chat-view-container">
+          <!-- Chat Message History -->
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-bubble bot">
+              Kumusta! I am your AI Agronomist Assistant. Ask me anything about crop health, Rice Blast treatments, fungicide dosages, or weather management.
+            </div>
+          </div>
+
+          <!-- Quick Suggestion Chips -->
+          <div class="quick-prompts-container">
+            <button class="prompt-chip" onclick="useQuickPrompt('How do I apply Tricyclazole 75% WP?')">How to apply fungicide?</button>
+            <button class="prompt-chip" onclick="useQuickPrompt('What causes Rice Blast disease?')">What causes Rice Blast?</button>
+            <button class="prompt-chip" onclick="useQuickPrompt('Should I spray fungicide before it rains?')">Spraying during rain?</button>
+            <button class="prompt-chip" onclick="useQuickPrompt('Are there organic controls for Rice Blast?')">Organic alternatives</button>
+          </div>
+
+          <!-- Input Bar -->
+          <div class="chat-input-bar">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Type your query here..." onkeypress="handleKeyPress(event)" />
+            <button class="btn-send" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </section>
+
     </div>
 
-    <!-- 3-Button Bottom Navigation Bar -->
+    <!-- ============================================== -->
+    <!-- OPENWEATHER ONE CALL 3.0 MODAL OVERLAY          -->
+    <!-- ============================================== -->
+    <div id="weather-modal" class="weather-modal-overlay">
+      <div class="weather-modal-header">
+        <div>
+          <div class="wm-title-sub">Data - OpenWeather One Call API 3.0</div>
+          <div class="wm-title-main">WEATHER AT POINT</div>
+          <div class="wm-coords">14.274°, 121.133°</div>
+        </div>
+        <button class="wm-close-btn" onclick="closeWeatherModal()">✕</button>
+      </div>
+
+      <div class="weather-modal-body">
+        <!-- Current Conditions -->
+        <div class="wm-current-row">
+          <span style="font-size: 32px;">☁️</span>
+          <div>
+            <div class="wm-temp-large">29°</div>
+          </div>
+          <div>
+            <div class="wm-condition-title">Few Clouds</div>
+            <div class="wm-condition-sub">Feels like 32° • 5 m/s E</div>
+            <div class="wm-condition-sub">Sunrise 05:52 • Sunset 17:26</div>
+          </div>
+        </div>
+
+        <!-- Key Stats Grid -->
+        <div class="wm-stats-grid">
+          <div class="wm-stat-card">
+            <div class="wm-stat-label">HUMIDITY</div>
+            <div class="wm-stat-value">69%</div>
+          </div>
+          <div class="wm-stat-card">
+            <div class="wm-stat-label">PRESSURE</div>
+            <div class="wm-stat-value">1014 hPa</div>
+          </div>
+          <div class="wm-stat-card">
+            <div class="wm-stat-label">UV INDEX</div>
+            <div class="wm-stat-value">0.0</div>
+          </div>
+          <div class="wm-stat-card">
+            <div class="wm-stat-label">CLOUDS</div>
+            <div class="wm-stat-value">12%</div>
+          </div>
+        </div>
+
+        <!-- Daily Forecast Scroll -->
+        <div>
+          <div class="wm-section-title">
+            <span>DAILY</span>
+            <span>8 DAYS</span>
+          </div>
+          <div class="wm-daily-scroll">
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Fri 6</div>
+              <div class="wm-daily-icon">☀️</div>
+              <div class="wm-daily-temps">32° <span style="color:#94a3b8; font-weight:400;">25°</span></div>
+              <div class="wm-daily-pop">0%</div>
+            </div>
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Sat 7</div>
+              <div class="wm-daily-icon">☁️</div>
+              <div class="wm-daily-temps">33° <span style="color:#94a3b8; font-weight:400;">27°</span></div>
+              <div class="wm-daily-pop">0%</div>
+            </div>
+            <div class="wm-daily-card" style="border-color: #0284c7; background: #1e293b;">
+              <div class="wm-daily-day">Sun 8</div>
+              <div class="wm-daily-icon">🌧️</div>
+              <div class="wm-daily-temps">30° <span style="color:#94a3b8; font-weight:400;">26°</span></div>
+              <div class="wm-daily-pop">97%</div>
+            </div>
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Mon 9</div>
+              <div class="wm-daily-icon">🌧️</div>
+              <div class="wm-daily-temps">31° <span style="color:#94a3b8; font-weight:400;">25°</span></div>
+              <div class="wm-daily-pop">38%</div>
+            </div>
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Tue 10</div>
+              <div class="wm-daily-icon">🌧️</div>
+              <div class="wm-daily-temps">29° <span style="color:#94a3b8; font-weight:400;">25°</span></div>
+              <div class="wm-daily-pop">96%</div>
+            </div>
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Wed 11</div>
+              <div class="wm-daily-icon">🌧️</div>
+              <div class="wm-daily-temps">28° <span style="color:#94a3b8; font-weight:400;">25°</span></div>
+              <div class="wm-daily-pop">55%</div>
+            </div>
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Thu 12</div>
+              <div class="wm-daily-icon">☁️</div>
+              <div class="wm-daily-temps">30° <span style="color:#94a3b8; font-weight:400;">26°</span></div>
+              <div class="wm-daily-pop">0%</div>
+            </div>
+            <div class="wm-daily-card">
+              <div class="wm-daily-day">Fri 13</div>
+              <div class="wm-daily-icon">🌧️</div>
+              <div class="wm-daily-temps">30° <span style="color:#94a3b8; font-weight:400;">26°</span></div>
+              <div class="wm-daily-pop">20%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hourly Forecast Grid -->
+        <div>
+          <div class="wm-section-title">
+            <span>HOURLY</span>
+            <span>1H STEPS • 48H</span>
+          </div>
+          <div class="wm-hourly-container">
+            <table class="wm-hourly-table">
+              <thead>
+                <tr>
+                  <th>HOURS</th>
+                  <th>19</th>
+                  <th>20</th>
+                  <th>21</th>
+                  <th>22</th>
+                  <th>23</th>
+                  <th>00</th>
+                  <th>01</th>
+                  <th>02</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>SKY</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                  <td>☁️</td>
+                </tr>
+                <tr>
+                  <td>TEMP</td>
+                  <td>29°</td>
+                  <td>29°</td>
+                  <td>29°</td>
+                  <td>29°</td>
+                  <td>28°</td>
+                  <td>28°</td>
+                  <td>27°</td>
+                  <td>27°</td>
+                </tr>
+                <tr>
+                  <td>FEELS</td>
+                  <td>32°</td>
+                  <td>32°</td>
+                  <td>32°</td>
+                  <td>32°</td>
+                  <td>32°</td>
+                  <td>31°</td>
+                  <td>30°</td>
+                  <td>30°</td>
+                </tr>
+                <tr>
+                  <td>WIND (m/s)</td>
+                  <td>5</td>
+                  <td>5</td>
+                  <td>5</td>
+                  <td>5</td>
+                  <td>5</td>
+                  <td>5</td>
+                  <td>6</td>
+                  <td>6</td>
+                </tr>
+                <tr>
+                  <td>GUSTS (m/s)</td>
+                  <td>10</td>
+                  <td>9</td>
+                  <td>9</td>
+                  <td>9</td>
+                  <td>9</td>
+                  <td>9</td>
+                  <td>10</td>
+                  <td>10</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Interactive Radar Map -->
+        <div>
+          <div class="wm-map-header" style="margin-bottom: 6px;">
+            <div class="wm-section-title" style="margin:0;">INTERACTIVE WEATHER MAP</div>
+            <div style="display:flex; gap:4px;">
+              <button class="wm-layer-btn active" id="btn-layer-rain" onclick="changeMapLayer('rain')">Rain</button>
+              <button class="wm-layer-btn" id="btn-layer-temp" onclick="changeMapLayer('temp')">Temp</button>
+              <button class="wm-layer-btn" id="btn-layer-wind" onclick="changeMapLayer('wind')">Wind</button>
+              <button class="wm-layer-btn" id="btn-layer-clouds" onclick="changeMapLayer('clouds')">Clouds</button>
+            </div>
+          </div>
+          <div id="weather-map"></div>
+        </div>
+
+        <!-- Location Metadata Card -->
+        <div class="wm-about-card">
+          <div style="font-weight: 800; color: #ffffff; margin-bottom: 4px;">ABOUT LOCATION</div>
+          <div>Coordinates: <strong style="color: #e2e8f0;">14.2736, 121.1333</strong></div>
+          <div>Timezone: <strong style="color: #e2e8f0;">Asia/Manila (UTC+8)</strong></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 4-Button Bottom Navigation Bar -->
     <nav class="nav-bar">
       <button class="nav-item active" id="tab-dashboard" onclick="switchTab('dashboard')">
-        <span>📊</span> Dashboard
+        <span>📊</span> Dash
       </button>
       <button class="nav-item" id="tab-scan" onclick="switchTab('scan')">
         <span>📷</span> Scan
       </button>
       <button class="nav-item" id="tab-advisory" onclick="switchTab('advisory')">
-        <span>🔊</span> Advisory
+        <span>🩺</span> Advisory
+      </button>
+      <button class="nav-item" id="tab-chat" onclick="switchTab('chat')">
+        <span>💬</span> AI Chat
       </button>
     </nav>
   </div>
 
+  <!-- Leaflet JS for Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     let isPumpManualActive = false;
+    let leafletMap = null;
+    let weatherLayerGroup = null;
 
-    // View Routing
+    // View Routing with Defensive Checks
     function switchTab(viewId) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
 
-      document.getElementById('view-' + viewId).classList.add('active');
-      document.getElementById('tab-' + viewId).classList.add('active');
+      const targetView = document.getElementById('view-' + viewId);
+      const targetTab = document.getElementById('tab-' + viewId);
+
+      if (targetView) targetView.classList.add('active');
+      if (targetTab) targetTab.classList.add('active');
+    }
+
+    // Toggle Weather Modal Overlay & Leaflet Map Initialization
+    function openWeatherModal() {
+      const modal = document.getElementById('weather-modal');
+      if (modal) modal.classList.add('active');
+
+      if (!leafletMap) {
+        setTimeout(() => {
+          initLeafletMap();
+        }, 100);
+      } else {
+        setTimeout(() => {
+          leafletMap.invalidateSize();
+        }, 100);
+      }
+    }
+
+    function closeWeatherModal() {
+      const modal = document.getElementById('weather-modal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    // Toggle Weather Modal Overlay & Leaflet Map Initialization
+    function openWeatherModal() {
+      const modal = document.getElementById('weather-modal');
+      modal.classList.add('active');
+
+      if (!leafletMap) {
+        setTimeout(() => {
+          initLeafletMap();
+        }, 100);
+      } else {
+        setTimeout(() => {
+          leafletMap.invalidateSize();
+        }, 100);
+      }
+    }
+
+    function closeWeatherModal() {
+      const modal = document.getElementById('weather-modal');
+      modal.classList.remove('active');
+    }
+
+    // Initialize Leaflet Map with Farm Marker & Weather Layer Simulation
+    function initLeafletMap() {
+      const lat = 14.2736;
+      const lng = 121.1333;
+
+      leafletMap = L.map('weather-map', {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([lat, lng], 11);
+
+      // Dark Mode Basemap
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(leafletMap);
+
+      // Farm Marker
+      const farmMarker = L.marker([lat, lng]).addTo(leafletMap);
+      farmMarker.bindPopup("<b>Rice Field Node 1</b><br>14.2736, 121.1333<br>Status: Monitoring").openPopup();
+
+      // Weather Overlay Group
+      weatherLayerGroup = L.layerGroup().addTo(leafletMap);
+      changeMapLayer('rain');
+    }
+
+    // Layer Switcher for Leaflet Map
+    function changeMapLayer(type) {
+      document.querySelectorAll('.wm-layer-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('btn-layer-' + type).classList.add('active');
+
+      if (!weatherLayerGroup) return;
+      weatherLayerGroup.clearLayers();
+
+      const lat = 14.2736;
+      const lng = 121.1333;
+
+      if (type === 'rain') {
+        // Simulated Rain Radar Heat Circles
+        const rainZone = L.circle([lat + 0.02, lng + 0.01], {
+          color: '#38bdf8',
+          fillColor: '#0284c7',
+          fillOpacity: 0.45,
+          radius: 8000
+        });
+        weatherLayerGroup.addLayer(rainZone);
+      } else if (type === 'temp') {
+        // Simulated Thermal Overlay
+        const tempZone = L.circle([lat, lng], {
+          color: '#f97316',
+          fillColor: '#ea580c',
+          fillOpacity: 0.35,
+          radius: 12000
+        });
+        weatherLayerGroup.addLayer(tempZone);
+      } else if (type === 'wind') {
+        // Simulated Wind Vector Zone
+        const windZone = L.circle([lat - 0.02, lng - 0.02], {
+          color: '#a855f7',
+          fillColor: '#9333ea',
+          fillOpacity: 0.35,
+          radius: 10000
+        });
+        weatherLayerGroup.addLayer(windZone);
+      } else if (type === 'clouds') {
+        // Simulated Cloud Layer Overlay
+        const cloudZone = L.circle([lat + 0.01, lng - 0.03], {
+          color: '#cbd5e1',
+          fillColor: '#64748b',
+          fillOpacity: 0.4,
+          radius: 14000
+        });
+        weatherLayerGroup.addLayer(cloudZone);
+      }
     }
 
     // Toggle Manual Pump Relay
@@ -594,7 +1415,78 @@
         utterance.rate = 0.95;
         window.speechSynthesis.speak(utterance);
       } else {
-        alert("Text-to-speech audio: " + speechText);
+        previewBox.innerText = "Audio playback system notice: " + speechText;
+      }
+    }
+
+    // ==============================================
+    // AI CHATBOT SYSTEM LOGIC
+    // ==============================================
+    
+    // Switch to Chat tab and append scan context
+    function openChatWithScanContext() {
+      switchTab('chat');
+      const contextMessage = "I see your leaf scan detected **Rice Blast (Magnaporthe oryzae)** with **94.2% confidence**. How can I assist you with treatment, dosage, or prevention?";
+      appendMessage('bot', contextMessage);
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    function useQuickPrompt(text) {
+      document.getElementById('chat-input').value = text;
+      sendMessage();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendMessage('user', text);
+      input.value = '';
+
+      setTimeout(() => {
+        const reply = generateAiResponse(text);
+        appendMessage('bot', reply);
+      }, 600);
+    }
+
+    function appendMessage(sender, text) {
+      const container = document.getElementById('chat-messages');
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${sender}`;
+      
+      const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      bubble.innerHTML = formattedText;
+
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function generateAiResponse(query) {
+      const q = query.toLowerCase();
+
+      if (q.includes('tricyclazole') || q.includes('apply') || q.includes('dosage')) {
+        return "For **Tricyclazole (75% WP)**, dissolve 0.6 grams per liter of water (approx. 10-12g per 16L knapsack sprayer). Spray evenly on leaves during early morning or late afternoon.";
+      } 
+      else if (q.includes('rain') || q.includes('weather') || q.includes('rainy')) {
+        return "Avoid spraying fungicide if heavy rain is expected within 4-6 hours, as it will wash away the chemical. Wait until foliage dries after rain.";
+      } 
+      else if (q.includes('cause') || q.includes('why') || q.includes('blast')) {
+        return "**Rice Blast** is caused by the fungus *Magnaporthe oryzae*. It thrives in high humidity (>90%), cool night temperatures, and excess soil nitrogen fertilizer.";
+      } 
+      else if (q.includes('organic') || q.includes('natural') || q.includes('alternative')) {
+        return "For organic control: 1) Apply neem oil extract spray, 2) Avoid excessive nitrogen fertilization, and 3) Maintain proper field drainage to lower canopy humidity.";
+      } 
+      else if (q.includes('pump') || q.includes('water') || q.includes('irrigation')) {
+        return "Your automated system suspended pumping because 12mm of rain is expected shortly. You can manually override this via the Dashboard if needed.";
+      } 
+      else {
+        return "I recommend monitoring affected plants twice daily. Ensure balanced potassium fertilization to boost plant immunity against fungal infections. How else can I assist your field operations?";
       }
     }
   </script>
